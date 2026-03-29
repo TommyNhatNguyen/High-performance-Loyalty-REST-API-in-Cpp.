@@ -1,0 +1,13 @@
+{
+  "dependencies": [
+    "cpp-httplib",
+    "fmt",
+    "jwt-cpp",
+    "libsodium",
+    "nlohmann-json",
+    "spdlog",
+    "sqlite3",
+    "sqlitecpp",
+    "boost-uuid"
+  ]
+}

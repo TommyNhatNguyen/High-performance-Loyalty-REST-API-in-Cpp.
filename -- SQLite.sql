@@ -1,0 +1,4 @@
+-- SQLite
+SELECT * FROM owners
+LIMIT 10
+OFFSET 0 * 10
