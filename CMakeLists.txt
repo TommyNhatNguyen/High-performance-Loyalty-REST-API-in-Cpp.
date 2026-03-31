@@ -4,6 +4,9 @@ project(loyalty_backend)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(BUILD_PATH "${CMAKE_BINARY_DIR}")
+
+
 
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 find_package(httplib CONFIG REQUIRED)
@@ -17,6 +20,7 @@ find_package(SQLiteCpp REQUIRED)
 add_definitions(-DPROJECT_ROOT="${CMAKE_SOURCE_DIR}")
 add_definitions(-DMIGRATION_PATH=\"${CMAKE_SOURCE_DIR}/src/migrations/init.sql\")
 add_definitions(-DSEED_PATH=\"${CMAKE_SOURCE_DIR}/src/migrations/seeds.sql\")
+
 # Load all cpp files
 file(GLOB_RECURSE SOURCES
     src/*.cpp
@@ -24,6 +28,7 @@ file(GLOB_RECURSE SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+target_compile_definitions(${PROJECT_NAME} PUBLIC BUILD_PATH="${BUILD_PATH}")
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/includes)
 
 target_link_libraries(${PROJECT_NAME}
