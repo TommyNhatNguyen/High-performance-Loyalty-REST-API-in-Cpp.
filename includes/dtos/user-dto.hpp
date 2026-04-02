@@ -1,21 +1,21 @@
 #pragma once
 #include "dtos/base-dto.hpp"
 
-class UserDTO : public BaseDTO {
+class CreateUserDTO : public BaseDTO {
 public:
-  UserDTO(const UserDTO &) = default;
-  UserDTO(UserDTO &&) = default;
-  UserDTO &operator=(const UserDTO &) = default;
-  UserDTO &operator=(UserDTO &&) = default;
-  UserDTO() = default;
-  ~UserDTO() = default;
-  static void fromJson(const nlohmann::json &json, UserDTO &dto);
-  static void toJson(nlohmann::json &json, const UserDTO &dto);
-  friend class UserMapper;
-
-private:
-  std::optional<std::string> id;
+  static void fromJson(const nlohmann::json &json, CreateUserDTO &dto);
+  static void toJson(nlohmann::json &json, const CreateUserDTO &dto);
   std::optional<std::string> username;
   std::optional<std::string> password;
   std::optional<int> is_active;
 };
+
+class UpdateUserDTO : public BaseDTO {
+public:
+  static void fromJson(const nlohmann::json &json, UpdateUserDTO &dto);
+  static void toJson(nlohmann::json &json, const UpdateUserDTO &dto);
+  std::optional<std::string> username;
+  std::optional<int> is_active;
+};
+
+class UserParams : public BaseDTO {};

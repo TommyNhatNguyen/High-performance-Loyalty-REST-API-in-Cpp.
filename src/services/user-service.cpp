@@ -1,6 +1,9 @@
 #include "services/user-service.hpp"
-// #include "mappers/user-mapper.hpp"
+#include "utils/utils.hpp"
+#include <ctime>
+#include <optional>
 #include <sodium/crypto_pwhash.h>
+#include <stdexcept>
 
 UserService::UserService(UserRepo &repo) : repo(repo) {};
 
@@ -26,23 +29,60 @@ std::optional<User> UserService::get(const std::string &id) const {
   return repo.findById(id);
 };
 
-// std::optional<User> UserService::getByUsername(const std::string &username) {
-//   return repo.findByUsername(username);
-// };
-// PaginateResultDTO<User> UserService::paginate(PaginateDTO<UserDTO> params) {
-//   return repo.paginate(params);
-// };
-// void UserService::insert(const UserDTO &payload) {
-//   auto data = UserMapper::toEntity(payload);
-//   repo.insert(data);
-// };
-// void UserService::update(const std::string &id, const UserDTO &payload) {
-//   auto updatedData = get(id);
-//   if (updatedData.has_value()) {
-//     auto data = UserMapper::toEntity(payload);
-//     repo.update(id, data);
-//   } else {
-//     throw std::runtime_error("User not found!");
-//   }
-// };
-// void UserService::softDelete(const std::string &id) { repo.softDelete(id); };
+std::optional<User> UserService::getByUsername(const std::string &username) {
+  return repo.findByUsername(username);
+};
+
+PaginateResultDTO<User>
+UserService::paginate(const PaginateDTO<UserParams> &params) {
+  return repo.paginate(params);
+};
+
+void UserService::insert(const CreateUserDTO &payload) {
+  try {
+    User user = User();
+    user.username = payload.username.value();
+    user.hash_password = this->hashPassword(payload.password.value());
+    user.is_active = 1;
+    user.created_at = Utils::getCurrentDate();
+    user.updated_at = Utils::getCurrentDate();
+    user.deleted = 0;
+    repo.insert(user);
+  } catch (const std::exception &e) {
+    throw std::runtime_error("Failed to create user: " + std::string(e.what()));
+  }
+};
+
+void UserService::update(const std::string &id, const UpdateUserDTO &payload) {
+  try {
+    auto updatedUser = this->get(id);
+    if (!updatedUser.has_value()) {
+      throw std::runtime_error("User not found");
+    }
+    User user = updatedUser.value();
+    user.username = payload.username.has_value() ? payload.username.value()
+                                                 : updatedUser.value().username;
+    user.is_active = payload.is_active.has_value()
+                         ? payload.is_active.value()
+                         : updatedUser.value().is_active;
+    user.updated_at = Utils::getCurrentDate();
+    repo.update(id, user);
+  } catch (const std::exception &e) {
+    throw std::runtime_error("Failed to update user: " + std::string(e.what()));
+  }
+};
+
+void UserService::softDelete(const std::string &id) {
+  try {
+    auto updatedUser = this->get(id);
+    if (!updatedUser.has_value()) {
+      throw std::runtime_error("User not found");
+    }
+    User user = updatedUser.value();
+    user.deleted_at = Utils::getCurrentDate();
+    user.deleted = 1;
+    repo.softDelete(id, user);
+  } catch (const std::exception &e) {
+    throw std::runtime_error("Failed to update user: " + std::string(e.what()));
+  }
+};

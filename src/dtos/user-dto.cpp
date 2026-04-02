@@ -1,17 +1,28 @@
 #include "dtos/user-dto.hpp"
+#include "utils/utils.hpp"
 
-void UserDTO::fromJson(const nlohmann::json &json, UserDTO &dto) {
+void CreateUserDTO::fromJson(const nlohmann::json &json, CreateUserDTO &dto) {
   BaseDTO::fromJson(json, dto);
-  dto.id = json.value("id", std::optional<std::string>());
-  dto.username = json.value("username", std::optional<std::string>());
-  dto.password = json.value("password", std::optional<std::string>());
-  dto.is_active = json.value("is_active", std::optional<int>());
+  dto.username = Utils::safeParseOptional<std::string>(json, "username");
+  dto.password = Utils::safeParseOptional<std::string>(json, "password");
+  dto.is_active = Utils::safeParseOptional<int>(json, "is_active");
 };
 
-void UserDTO::toJson(nlohmann::json &json, const UserDTO &dto) {
+void CreateUserDTO::toJson(nlohmann::json &json, const CreateUserDTO &dto) {
   BaseDTO::toJson(json, dto);
-  json["id"] = dto.id.value_or(nullptr);
-  json["username"] = dto.username.value_or(nullptr);
-  json["password"] = dto.password.value_or(nullptr);
-  json["is_active"] = dto.is_active.value_or(0);
+  json["username"] = dto.username;
+  json["password"] = dto.password;
+  json["is_active"] = dto.is_active;
 };
+
+void UpdateUserDTO::fromJson(const nlohmann::json &json, UpdateUserDTO &dto) {
+  BaseDTO::fromJson(json, dto);
+  dto.username = Utils::safeParseOptional<std::string>(json, "username");
+  dto.is_active = Utils::safeParseOptional<int>(json, "is_active");
+};
+
+void UpdateUserDTO::toJson(nlohmann::json &json, const UpdateUserDTO &dto) {
+  BaseDTO::toJson(json, dto);
+  json["username"] = dto.username.has_value() ? dto.username.value() : nullptr;
+  json["is_active"] = dto.is_active.has_value() ? dto.is_active.value() : NULL;
+}

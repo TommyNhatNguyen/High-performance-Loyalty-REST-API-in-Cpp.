@@ -1,11 +1,12 @@
 #include "dtos/base-dto.hpp"
+#include "utils/utils.hpp"
 
 void BaseDTO::fromJson(const nlohmann::json &json, BaseDTO &dto) {
-  dto.created_by = json.value("created_by", "");
-  dto.created_at = json.value("created_at", "");
-  dto.updated_at = json.value("updated_at", "");
-  dto.deleted_at = json.value("deleted_at", "");
-  dto.deleted = json.value("deleted", 0);
+  dto.created_by = Utils::safeParseOptional<std::string>(json, "created_by");
+  dto.created_at = Utils::safeParseOptional<std::string>(json, "created_at");
+  dto.updated_at = Utils::safeParseOptional<std::string>(json, "updated_at");
+  dto.deleted_at = Utils::safeParseOptional<std::string>(json, "deleted_at");
+  dto.deleted = Utils::safeParseOptional<int>(json, "deleted");
 };
 
 void BaseDTO::toJson(nlohmann::json &json, const BaseDTO &dto) {
