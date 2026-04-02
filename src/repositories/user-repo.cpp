@@ -3,7 +3,6 @@
 #include "fmt/format.h"
 #include <SQLiteCpp/Transaction.h>
 #include <optional>
-#include <stdexcept>
 
 UserRepo::UserRepo(SqliteRepo &db) : db(db) {};
 
