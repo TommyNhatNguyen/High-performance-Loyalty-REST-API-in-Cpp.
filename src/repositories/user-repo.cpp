@@ -61,7 +61,40 @@ std::optional<User> UserRepo::findByUsername(const std::string &username) {
 
 PaginateResultDTO<User>
 UserRepo::paginate(const PaginateDTO<UserParams> &params) {
-  PaginateResultDTO<User> result = PaginateResultDTO<User>();
+  PaginateResultDTO<User> result;
+  auto query = fmt::format(
+      "SELECT * FROM {} WHERE deleted = :deleted LIMIT :limit OFFSET :offset",
+      COLLECTIONS::USERS);
+  auto countQuery = fmt::format(
+      "SELECT COUNT(*) FROM {} WHERE deleted = :deleted", COLLECTIONS::USERS);
+  SQLite::Statement statement(db.getDb(), query);
+  SQLite::Statement countStatement(db.getDb(), countQuery);
+  countStatement.bind(":deleted", 0);
+  if (countStatement.executeStep()) {
+    result.total = countStatement.getColumn(0).getInt();
+  }
+  statement.bind(":deleted", 0);
+  statement.bind(":limit", params.pageSize);
+  statement.bind(":offset", (params.page - 1) * params.pageSize);
+  std::vector<User> users;
+  while (statement.executeStep()) {
+    User user;
+    nlohmann::json json;
+    json["id"] = statement.getColumn("id").getString();
+    json["username"] = statement.getColumn("username").getString();
+    json["hash_password"] = statement.getColumn("hash_password").getString();
+    json["is_active"] = statement.getColumn("is_active").getInt();
+    json["created_by"] = statement.getColumn("created_by").getString();
+    json["created_at"] = statement.getColumn("created_at").getString();
+    json["updated_at"] = statement.getColumn("updated_at").getString();
+    json["deleted_at"] = statement.getColumn("deleted_at").getString();
+    json["deleted"] = statement.getColumn("deleted").getInt();
+    User::fromJson(json, user);
+    users.push_back(user);
+  }
+  result.data = users;
+  result.page = params.page;
+  result.pageSize = params.pageSize;
   return result;
 }
 

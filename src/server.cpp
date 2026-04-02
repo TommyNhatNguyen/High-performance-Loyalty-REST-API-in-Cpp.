@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "dtos/success-dto.hpp"
 #include "dtos/user-dto.hpp"
 #include "entities/user-entity.hpp"
 #include "repositories/SqliteRepo.hpp"
@@ -21,26 +22,50 @@ void Server::start() {
             << _config.PORT << "\n";
   auto userRepo = UserRepo(SqliteRepo::getInstance());
   UserService userService(userRepo);
-  _app.Get("/api/v1/users/:id",
-           [this, &userService](const httplib::Request &req,
-                                httplib::Response &res) {
-             try {
-               nlohmann::json json;
-               auto id = req.path_params.at("id");
-               auto user = userService.get(id);
-               if (user.has_value()) {
-                 User::toJson(json, user.value());
-                 res.status = 200;
-                 res.set_content(json.dump(), "application/json");
-               } else {
-                 res.status = 204;
-                 res.set_content("User not found!", "application/json");
-               }
-             } catch (const std::exception &e) {
-               res.status = 500;
-               res.set_content(e.what(), "text/plain");
-             }
-           });
+
+  _app.Get("/api/v1/users", [this, &userService](const httplib::Request &req,
+                                                 httplib::Response &res) {
+    nlohmann::json result;
+    try {
+      PaginateDTO<UserParams> params;
+      params.page =
+          req.has_param("page") ? std::stoi(req.get_param_value("page")) : 1;
+      params.pageSize = req.has_param("pageSize")
+                            ? std::stoi(req.get_param_value("pageSize"))
+                            : 10;
+      auto users = userService.paginate(params);
+      PaginateResultDTO<User>::toJson(result, users);
+      auto response = SuccessResponseDTO::toJson(
+          SuccessResponseDTO("Users fetched successfully", result, 200));
+      res.set_content(response.dump(), "application/json");
+    } catch (const std::exception &e) {
+      res.status = 500;
+      res.set_content(e.what(), "text/plain");
+    }
+  });
+
+  _app.Get(
+      "/api/v1/users/:id", [this, &userService](const httplib::Request &req,
+                                                httplib::Response &res) {
+        nlohmann::json result;
+        try {
+          auto id = req.path_params.at("id");
+          auto user = userService.get(id);
+          if (user.has_value()) {
+            User::toJson(result, user.value());
+            auto response = SuccessResponseDTO::toJson(
+                SuccessResponseDTO("User fetched successfully", result, 200));
+            res.set_content(response.dump(), "application/json");
+          } else {
+            auto response = SuccessResponseDTO::toJson(
+                SuccessResponseDTO("User not found!", result, 204));
+            res.set_content(response.dump(), "application/json");
+          }
+        } catch (const std::exception &e) {
+          res.status = 500;
+          res.set_content(e.what(), "text/plain");
+        }
+      });
 
   _app.Post("/api/v1/users", [this, &userService](const httplib::Request &req,
                                                   httplib::Response &res) {
@@ -49,48 +74,48 @@ void Server::start() {
       auto reqBody = nlohmann::json::parse(req.body);
       CreateUserDTO::fromJson(reqBody, payload);
       userService.insert(payload);
-      res.status = 200;
-      res.set_content(
-          nlohmann::json({{"message", "User created successfully"}}).dump(),
-          "application/json");
+      auto response = SuccessResponseDTO::toJson(SuccessResponseDTO(
+          "User created successfully", nlohmann::json::object(), 200));
+      res.set_content(response.dump(), "application/json");
     } catch (const std::exception &e) {
       res.status = 500;
       res.set_content(e.what(), "text/plain");
     }
   });
 
-  _app.Put(
+  _app.Put("/api/v1/users/:id",
+           [this, &userService](const httplib::Request &req,
+                                httplib::Response &res) {
+             try {
+               UpdateUserDTO payload;
+               auto id = req.path_params.at("id");
+               auto reqBody = nlohmann::json::parse(req.body);
+               UpdateUserDTO::fromJson(reqBody, payload);
+               userService.update(id, payload);
+               auto response = SuccessResponseDTO::toJson(SuccessResponseDTO(
+                   "User updated successfully", nlohmann::json::object(), 200));
+               res.set_content(response.dump(), "application/json");
+             } catch (const std::exception &e) {
+               res.status = 500;
+               res.set_content(e.what(), "text/plain");
+             }
+           });
+
+  _app.Delete(
       "/api/v1/users/:id", [this, &userService](const httplib::Request &req,
                                                 httplib::Response &res) {
         try {
-          UpdateUserDTO payload;
           auto id = req.path_params.at("id");
-          auto reqBody = nlohmann::json::parse(req.body);
-          UpdateUserDTO::fromJson(reqBody, payload);
-          userService.update(id, payload);
-          res.status = 200;
-          res.set_content(nlohmann::json({{"message", "User updated"}}).dump(),
-                          "application/json");
+          userService.softDelete(id);
+          auto response = SuccessResponseDTO::toJson(SuccessResponseDTO(
+              "User deleted successfully", nlohmann::json::object(), 200));
+          res.set_content(response.dump(), "application/json");
+
         } catch (const std::exception &e) {
           res.status = 500;
           res.set_content(e.what(), "text/plain");
         }
       });
-
-  _app.Delete("/api/v1/users/:id",
-              [this, &userService](const httplib::Request &req,
-                                   httplib::Response &res) {
-                try {
-                  auto id = req.path_params.at("id");
-                  userService.softDelete(id);
-                  res.status = 200;
-                  res.set_content("User deleted", "application/json");
-
-                } catch (const std::exception &e) {
-                  res.status = 500;
-                  res.set_content(e.what(), "text/plain");
-                }
-              });
 
   _app.listen(_config.HOST, _config.PORT);
 };

@@ -58,5 +58,6 @@
     "queue": "cpp",
     "stack": "cpp",
     "span": "cpp"
-  }
+  },
+  "C_Cpp.errorSquiggles": "disabled"
 }
