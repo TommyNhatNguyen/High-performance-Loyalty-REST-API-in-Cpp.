@@ -26,11 +26,19 @@ bool UserService::verifyPassword(const std::string &password,
 }
 
 std::optional<User> UserService::get(const std::string &id) const {
-  return repo.findById(id);
+  auto user = repo.findById(id);
+  if (!user.has_value()) {
+    throw 404;
+  }
+  return user;
 };
 
 std::optional<User> UserService::getByUsername(const std::string &username) {
-  return repo.findByUsername(username);
+  auto user = repo.findByUsername(username);
+  if (!user.has_value()) {
+    throw 404;
+  }
+  return user;
 };
 
 PaginateResultDTO<User>
@@ -57,7 +65,7 @@ void UserService::update(const std::string &id, const UpdateUserDTO &payload) {
   try {
     auto updatedUser = this->get(id);
     if (!updatedUser.has_value()) {
-      throw std::runtime_error("User not found");
+      throw 404;
     }
     User user = updatedUser.value();
     user.username = payload.username.has_value() ? payload.username.value()
@@ -76,7 +84,7 @@ void UserService::softDelete(const std::string &id) {
   try {
     auto updatedUser = this->get(id);
     if (!updatedUser.has_value()) {
-      throw std::runtime_error("User not found");
+      throw 404;
     }
     User user = updatedUser.value();
     user.deleted_at = Utils::getCurrentDate();

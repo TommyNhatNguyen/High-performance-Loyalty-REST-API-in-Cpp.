@@ -1,4 +1,5 @@
 #include "server.hpp"
+#include "dtos/error-dto.hpp"
 #include "dtos/success-dto.hpp"
 #include "dtos/user-dto.hpp"
 #include "entities/user-entity.hpp"
@@ -39,8 +40,9 @@ void Server::start() {
           SuccessResponseDTO("Users fetched successfully", result, 200));
       res.set_content(response.dump(), "application/json");
     } catch (const std::exception &e) {
-      res.status = 500;
-      res.set_content(e.what(), "text/plain");
+      auto response = ErrorResponseDTO::toJson(
+          ErrorResponseDTO(e.what(), result, 500, 500));
+      res.set_content(response.dump(), "application/json");
     }
   });
 
@@ -57,13 +59,18 @@ void Server::start() {
                 SuccessResponseDTO("User fetched successfully", result, 200));
             res.set_content(response.dump(), "application/json");
           } else {
-            auto response = SuccessResponseDTO::toJson(
-                SuccessResponseDTO("User not found!", result, 204));
+            auto response = ErrorResponseDTO::toJson(
+                ErrorResponseDTO("User not found!", result, 204, 404));
             res.set_content(response.dump(), "application/json");
           }
+        } catch (int errorCode) {
+          auto response = ErrorResponseDTO::toJson(
+              ErrorResponseDTO("User not found!", result, 204, errorCode));
+          res.set_content(response.dump(), "application/json");
         } catch (const std::exception &e) {
-          res.status = 500;
-          res.set_content(e.what(), "text/plain");
+          auto response = ErrorResponseDTO::toJson(
+              ErrorResponseDTO(e.what(), result, 500, 500));
+          res.set_content(response.dump(), "application/json");
         }
       });
 
@@ -78,28 +85,34 @@ void Server::start() {
           "User created successfully", nlohmann::json::object(), 200));
       res.set_content(response.dump(), "application/json");
     } catch (const std::exception &e) {
-      res.status = 500;
-      res.set_content(e.what(), "text/plain");
+      auto response = ErrorResponseDTO::toJson(
+          ErrorResponseDTO(e.what(), nlohmann::json::object(), 500, 500));
+      res.set_content(response.dump(), "application/json");
     }
   });
 
-  _app.Put("/api/v1/users/:id",
-           [this, &userService](const httplib::Request &req,
-                                httplib::Response &res) {
-             try {
-               UpdateUserDTO payload;
-               auto id = req.path_params.at("id");
-               auto reqBody = nlohmann::json::parse(req.body);
-               UpdateUserDTO::fromJson(reqBody, payload);
-               userService.update(id, payload);
-               auto response = SuccessResponseDTO::toJson(SuccessResponseDTO(
-                   "User updated successfully", nlohmann::json::object(), 200));
-               res.set_content(response.dump(), "application/json");
-             } catch (const std::exception &e) {
-               res.status = 500;
-               res.set_content(e.what(), "text/plain");
-             }
-           });
+  _app.Put(
+      "/api/v1/users/:id", [this, &userService](const httplib::Request &req,
+                                                httplib::Response &res) {
+        try {
+          UpdateUserDTO payload;
+          auto id = req.path_params.at("id");
+          auto reqBody = nlohmann::json::parse(req.body);
+          UpdateUserDTO::fromJson(reqBody, payload);
+          userService.update(id, payload);
+          auto response = SuccessResponseDTO::toJson(SuccessResponseDTO(
+              "User updated successfully", nlohmann::json::object(), 200));
+          res.set_content(response.dump(), "application/json");
+        } catch (int errorCode) {
+          auto response = ErrorResponseDTO::toJson(ErrorResponseDTO(
+              "User not found!", nlohmann::json::object(), 204, errorCode));
+          res.set_content(response.dump(), "application/json");
+        } catch (const std::exception &e) {
+          auto response = ErrorResponseDTO::toJson(
+              ErrorResponseDTO(e.what(), nlohmann::json::object(), 500, 500));
+          res.set_content(response.dump(), "application/json");
+        }
+      });
 
   _app.Delete(
       "/api/v1/users/:id", [this, &userService](const httplib::Request &req,
@@ -110,10 +123,14 @@ void Server::start() {
           auto response = SuccessResponseDTO::toJson(SuccessResponseDTO(
               "User deleted successfully", nlohmann::json::object(), 200));
           res.set_content(response.dump(), "application/json");
-
+        } catch (int errorCode) {
+          auto response = ErrorResponseDTO::toJson(ErrorResponseDTO(
+              "User not found!", nlohmann::json::object(), 204, errorCode));
+          res.set_content(response.dump(), "application/json");
         } catch (const std::exception &e) {
-          res.status = 500;
-          res.set_content(e.what(), "text/plain");
+          auto response = ErrorResponseDTO::toJson(
+              ErrorResponseDTO(e.what(), nlohmann::json::object(), 500, 500));
+          res.set_content(response.dump(), "application/json");
         }
       });
 
